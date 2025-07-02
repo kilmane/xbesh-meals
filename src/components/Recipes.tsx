@@ -3,17 +3,36 @@ import { Clock, Users, Search, Filter, Heart, ChefHat, Plus, Info } from 'lucide
 import { useApp, Recipe } from '../context/AppContext';
 
 const Recipes: React.FC = () => {
-  const { state, dispatch } = useApp();
+  const { 
+    ingredients = [],
+    recipes = [],
+    recipesLoading,
+    ingredientsLoading,
+    addRecipe
+  } = useApp();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState('All');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [showAddRecipe, setShowAddRecipe] = useState(false);
 
+  // Show loading state while data is being fetched
+  if (recipesLoading || ingredientsLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading recipes...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Get all unique tags
-  const allTags = ['All', ...new Set(state.recipes.flatMap(recipe => recipe.tags))];
+  const allTags = ['All', ...new Set(recipes.flatMap(recipe => recipe.tags))];
 
   // Filter recipes
-  const filteredRecipes = state.recipes.filter(recipe => {
+  const filteredRecipes = recipes.filter(recipe => {
     const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          recipe.ingredients.some(ing => ing.name.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesTag = selectedTag === 'All' || recipe.tags.includes(selectedTag);
@@ -56,14 +75,14 @@ const Recipes: React.FC = () => {
   // Check if we can make a recipe with available ingredients
   const canMakeRecipe = (recipe: Recipe) => {
     return recipe.ingredients.every(recipeIngredient => {
-      const availableIngredient = findMatchingIngredient(recipeIngredient.name, state.ingredients);
+      const availableIngredient = findMatchingIngredient(recipeIngredient.name, ingredients);
       return availableIngredient && availableIngredient.quantity >= recipeIngredient.quantity;
     });
   };
 
   const getMissingIngredients = (recipe: Recipe) => {
     return recipe.ingredients.filter(recipeIngredient => {
-      const availableIngredient = findMatchingIngredient(recipeIngredient.name, state.ingredients);
+      const availableIngredient = findMatchingIngredient(recipeIngredient.name, ingredients);
       return !availableIngredient || availableIngredient.quantity < recipeIngredient.quantity;
     });
   };
@@ -73,7 +92,7 @@ const Recipes: React.FC = () => {
     let totalCount = recipe.ingredients.length;
     
     recipe.ingredients.forEach(recipeIngredient => {
-      const availableIngredient = findMatchingIngredient(recipeIngredient.name, state.ingredients);
+      const availableIngredient = findMatchingIngredient(recipeIngredient.name, ingredients);
       if (availableIngredient && availableIngredient.quantity >= recipeIngredient.quantity) {
         availableCount++;
       }
@@ -522,9 +541,13 @@ const Recipes: React.FC = () => {
     );
   };
 
-  const handleAddRecipe = (recipe: Recipe) => {
-    dispatch({ type: 'ADD_RECIPE', payload: recipe });
-    setShowAddRecipe(false);
+  const handleAddRecipe = async (recipe: Recipe) => {
+    try {
+      await addRecipe(recipe);
+      setShowAddRecipe(false);
+    } catch (error) {
+      console.error('Error adding recipe:', error);
+    }
   };
 
   return (
@@ -621,7 +644,7 @@ const Recipes: React.FC = () => {
             </div>
             <div>
               <p className="text-lg font-semibold text-gray-900">
-                {state.recipes.filter(r => r.isUserCreated).length}
+                {recipes.filter(r => r.isUserCreated).length}
               </p>
               <p className="text-sm text-gray-600">Custom Recipes</p>
             </div>

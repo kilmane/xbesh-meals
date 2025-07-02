@@ -3,19 +3,38 @@ import { Calendar, Package, AlertTriangle, TrendingUp, Clock, Target, Info, Arro
 import { useApp } from '../context/AppContext';
 
 const Dashboard: React.FC = () => {
-  const { state } = useApp();
+  const { 
+    ingredients = [], 
+    mealPlans = [], 
+    shoppingList = [],
+    ingredientsLoading,
+    mealPlansLoading,
+    shoppingListLoading
+  } = useApp();
+
+  // Show loading state while data is being fetched
+  if (ingredientsLoading || mealPlansLoading || shoppingListLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Calculate expiring items (within 3 days)
   const today = new Date();
   const threeDaysFromNow = new Date();
   threeDaysFromNow.setDate(today.getDate() + 3);
 
-  const expiringItems = state.ingredients.filter(ingredient => {
+  const expiringItems = ingredients.filter(ingredient => {
     const expiryDate = new Date(ingredient.expiryDate);
     return expiryDate <= threeDaysFromNow && expiryDate >= today;
   });
 
-  const expiredItems = state.ingredients.filter(ingredient => {
+  const expiredItems = ingredients.filter(ingredient => {
     const expiryDate = new Date(ingredient.expiryDate);
     return expiryDate < today;
   });
@@ -26,7 +45,7 @@ const Dashboard: React.FC = () => {
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
 
-  const thisWeekMealPlans = state.mealPlans.filter(plan => {
+  const thisWeekMealPlans = mealPlans.filter(plan => {
     const planDate = new Date(plan.date);
     return planDate >= startOfWeek && planDate <= endOfWeek;
   });
@@ -131,7 +150,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Ingredients"
-          value={state.ingredients.length}
+          value={ingredients.length}
           icon={<Package className="w-6 h-6 text-white" />}
           color="bg-blue-500"
         />
@@ -150,7 +169,7 @@ const Dashboard: React.FC = () => {
         />
         <StatCard
           title="Shopping Items"
-          value={state.shoppingList.length}
+          value={shoppingList.length}
           icon={<Target className="w-6 h-6 text-white" />}
           color="bg-purple-500"
         />
