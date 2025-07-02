@@ -3,12 +3,12 @@ import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 export interface Ingredient {
   id: string;
   name: string;
-  category: string;
+  categories: string[]; // Changed from category to categories array
   quantity: number;
   unit: string;
   expiryDate: string;
   addedDate: string;
-  tags?: string[]; // Add tags to help with categorization
+  tags?: string[];
 }
 
 export interface Recipe {
@@ -72,7 +72,7 @@ const initialState: AppState = {
     {
       id: '1',
       name: 'Chicken Breast',
-      category: 'Protein',
+      categories: ['Protein'],
       quantity: 1,
       unit: 'kg',
       expiryDate: '2025-01-10',
@@ -82,7 +82,7 @@ const initialState: AppState = {
     {
       id: '2',
       name: 'Broccoli',
-      category: 'Vegetables',
+      categories: ['Vegetables'],
       quantity: 500,
       unit: 'g',
       expiryDate: '2025-01-08',
@@ -92,7 +92,7 @@ const initialState: AppState = {
     {
       id: '3',
       name: 'Rice',
-      category: 'Grains',
+      categories: ['Grains'],
       quantity: 2,
       unit: 'kg',
       expiryDate: '2025-03-01',
@@ -102,7 +102,7 @@ const initialState: AppState = {
     {
       id: '4',
       name: 'Salmon Fillet',
-      category: 'Protein',
+      categories: ['Protein'],
       quantity: 750,
       unit: 'g',
       expiryDate: '2025-01-07',
@@ -112,7 +112,7 @@ const initialState: AppState = {
     {
       id: '5',
       name: 'Bell Peppers',
-      category: 'Vegetables',
+      categories: ['Vegetables'],
       quantity: 4,
       unit: 'piece',
       expiryDate: '2025-01-12',
@@ -122,7 +122,7 @@ const initialState: AppState = {
     {
       id: '6',
       name: 'Frozen Peas',
-      category: 'Frozen',
+      categories: ['Vegetables', 'Frozen'],
       quantity: 500,
       unit: 'g',
       expiryDate: '2025-06-01',
@@ -132,7 +132,7 @@ const initialState: AppState = {
     {
       id: '7',
       name: 'Ground Beef',
-      category: 'Frozen',
+      categories: ['Protein', 'Frozen'],
       quantity: 1,
       unit: 'kg',
       expiryDate: '2025-04-01',
@@ -142,7 +142,7 @@ const initialState: AppState = {
     {
       id: '8',
       name: 'Pasta',
-      category: 'Grains',
+      categories: ['Grains'],
       quantity: 500,
       unit: 'g',
       expiryDate: '2025-12-01',
@@ -152,7 +152,7 @@ const initialState: AppState = {
     {
       id: '9',
       name: 'Pasta Sauce',
-      category: 'Pantry',
+      categories: ['Pantry'],
       quantity: 2,
       unit: 'jar',
       expiryDate: '2025-08-01',

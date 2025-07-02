@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Calendar, Package2, AlertCircle, Info } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar, Package2, AlertCircle, Info, X } from 'lucide-react';
 import { useApp, Ingredient } from '../context/AppContext';
 
 const Inventory: React.FC = () => {
@@ -13,7 +13,7 @@ const Inventory: React.FC = () => {
 
   const filteredIngredients = state.ingredients.filter(ingredient => {
     const matchesSearch = ingredient.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || ingredient.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'All' || ingredient.categories.includes(selectedCategory);
     return matchesSearch && matchesCategory;
   });
 
@@ -40,14 +40,29 @@ const Inventory: React.FC = () => {
   }> = ({ ingredient, onSubmit, onCancel }) => {
     const [formData, setFormData] = useState({
       name: ingredient?.name || '',
-      category: ingredient?.category || 'Vegetables',
+      categories: ingredient?.categories || ['Vegetables'],
       quantity: ingredient?.quantity || 1,
       unit: ingredient?.unit || 'piece',
       expiryDate: ingredient?.expiryDate || '',
     });
 
+    const availableCategories = categories.slice(1); // Remove 'All'
+
+    const handleCategoryToggle = (category: string) => {
+      setFormData(prev => ({
+        ...prev,
+        categories: prev.categories.includes(category)
+          ? prev.categories.filter(c => c !== category)
+          : [...prev.categories, category]
+      }));
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
+      if (formData.categories.length === 0) {
+        alert('Please select at least one category');
+        return;
+      }
       const newIngredient: Ingredient = {
         id: ingredient?.id || Date.now().toString(),
         ...formData,
@@ -58,7 +73,7 @@ const Inventory: React.FC = () => {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+        <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {ingredient ? 'Edit Ingredient' : 'Add New Ingredient'}
           </h3>
@@ -73,19 +88,47 @@ const Inventory: React.FC = () => {
                 required
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  {categories.slice(1).map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Categories</label>
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500">Select all categories that apply (e.g., Protein + Frozen)</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {availableCategories.map(category => (
+                    <label key={category} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.categories.includes(category)}
+                        onChange={() => handleCategoryToggle(category)}
+                        className="rounded border-gray-300 text-green-500 focus:ring-green-500"
+                      />
+                      <span className="text-sm text-gray-700">{category}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
+                {formData.categories.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {formData.categories.map(category => (
+                      <span
+                        key={category}
+                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                      >
+                        {category}
+                        <button
+                          type="button"
+                          onClick={() => handleCategoryToggle(category)}
+                          className="ml-1 text-green-600 hover:text-green-800"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
                 <select
@@ -103,10 +146,10 @@ const Inventory: React.FC = () => {
                   <option value="l">l</option>
                   <option value="bunch">bunch</option>
                   <option value="package">package</option>
+                  <option value="jar">jar</option>
+                  <option value="can">can</option>
                 </select>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
                 <input
@@ -118,17 +161,19 @@ const Inventory: React.FC = () => {
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-                <input
-                  type="date"
-                  value={formData.expiryDate}
-                  onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  required
-                />
-              </div>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+              <input
+                type="date"
+                value={formData.expiryDate}
+                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                required
+              />
+            </div>
+
             <div className="flex space-x-3 pt-4">
               <button
                 type="submit"
@@ -186,12 +231,12 @@ const Inventory: React.FC = () => {
         <div className="flex items-start space-x-3">
           <Info className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
           <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Inventory Management Tips:</p>
+            <p className="font-medium mb-1">Multi-Category Inventory Tips:</p>
             <ul className="space-y-1 text-blue-700">
-              <li>• Add ingredients from your fridge, pantry, and freezer</li>
-              <li>• Include expiry dates to get alerts before food spoils</li>
-              <li>• Use metric (kg/g) or imperial (lbs/oz) units as preferred</li>
+              <li>• Select multiple categories for items (e.g., Protein + Frozen for frozen chicken)</li>
+              <li>• Use the category filter to find items by any of their categories</li>
               <li>• Frozen items typically last much longer - adjust expiry dates accordingly</li>
+              <li>• Categories help with meal planning and shopping organization</li>
             </ul>
           </div>
         </div>
@@ -252,9 +297,18 @@ const Inventory: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500">Category</span>
-                  <span className="text-xs font-medium bg-gray-100 px-2 py-1 rounded">{ingredient.category}</span>
+                <div className="flex justify-between items-start">
+                  <span className="text-xs text-gray-500">Categories</span>
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {ingredient.categories.map(category => (
+                      <span
+                        key={category}
+                        className="text-xs font-medium bg-gray-100 px-2 py-1 rounded"
+                      >
+                        {category}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 
                 <div className="flex justify-between items-center">
