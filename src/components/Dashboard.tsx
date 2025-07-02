@@ -1,21 +1,58 @@
 import React from 'react';
-import { Calendar, Package, AlertTriangle, TrendingUp, Clock, Target, Info, ArrowRight } from 'lucide-react';
+import { Calendar, Package, AlertTriangle, TrendingUp, Clock, Target, Info, ArrowRight, Loader2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const Dashboard: React.FC = () => {
-  const { state } = useApp();
+  const { 
+    ingredients, 
+    ingredientsLoading, 
+    mealPlans, 
+    mealPlansLoading, 
+    shoppingList, 
+    shoppingListLoading,
+    user,
+    authLoading
+  } = useApp();
+
+  // Show loading state while data is being fetched
+  if (authLoading || ingredientsLoading || mealPlansLoading || shoppingListLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
+          <p className="text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show sign-in prompt if user is not authenticated
+  if (!user) {
+    return (
+      <div className="text-center py-12">
+        <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to FreshPlan</h2>
+        <p className="text-gray-600 mb-6">Please sign in to view your dashboard and start managing your meals.</p>
+      </div>
+    );
+  }
+
+  // Ensure we have arrays to work with (fallback to empty arrays)
+  const safeIngredients = ingredients || [];
+  const safeMealPlans = mealPlans || [];
+  const safeShoppingList = shoppingList || [];
 
   // Calculate expiring items (within 3 days)
   const today = new Date();
   const threeDaysFromNow = new Date();
   threeDaysFromNow.setDate(today.getDate() + 3);
 
-  const expiringItems = state.ingredients.filter(ingredient => {
+  const expiringItems = safeIngredients.filter(ingredient => {
     const expiryDate = new Date(ingredient.expiryDate);
     return expiryDate <= threeDaysFromNow && expiryDate >= today;
   });
 
-  const expiredItems = state.ingredients.filter(ingredient => {
+  const expiredItems = safeIngredients.filter(ingredient => {
     const expiryDate = new Date(ingredient.expiryDate);
     return expiryDate < today;
   });
@@ -26,7 +63,7 @@ const Dashboard: React.FC = () => {
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
 
-  const thisWeekMealPlans = state.mealPlans.filter(plan => {
+  const thisWeekMealPlans = safeMealPlans.filter(plan => {
     const planDate = new Date(plan.date);
     return planDate >= startOfWeek && planDate <= endOfWeek;
   });
@@ -131,7 +168,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Ingredients"
-          value={state.ingredients.length}
+          value={safeIngredients.length}
           icon={<Package className="w-6 h-6 text-white" />}
           color="bg-blue-500"
         />
@@ -150,7 +187,7 @@ const Dashboard: React.FC = () => {
         />
         <StatCard
           title="Shopping Items"
-          value={state.shoppingList.length}
+          value={safeShoppingList.length}
           icon={<Target className="w-6 h-6 text-white" />}
           color="bg-purple-500"
         />
