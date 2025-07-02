@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Calendar, Package2, AlertCircle, Info, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar, Package2, AlertCircle, Info, X, Loader } from 'lucide-react';
 import { useApp, Ingredient } from '../context/AppContext';
 
 const Inventory: React.FC = () => {
-  const { state, dispatch } = useApp();
+  const { 
+    ingredients, 
+    ingredientsLoading, 
+    ingredientsError,
+    addIngredient, 
+    updateIngredient, 
+    deleteIngredient 
+  } = useApp();
+  
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,7 +19,7 @@ const Inventory: React.FC = () => {
 
   const categories = ['All', 'Protein', 'Vegetables', 'Fruits', 'Dairy', 'Grains', 'Pantry', 'Herbs & Spices', 'Frozen'];
 
-  const filteredIngredients = state.ingredients.filter(ingredient => {
+  const filteredIngredients = ingredients.filter(ingredient => {
     const matchesSearch = ingredient.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || ingredient.categories.includes(selectedCategory);
     return matchesSearch && matchesCategory;
@@ -35,7 +43,7 @@ const Inventory: React.FC = () => {
 
   const IngredientForm: React.FC<{
     ingredient?: Ingredient;
-    onSubmit: (ingredient: Ingredient) => void;
+    onSubmit: (ingredient: Omit<Ingredient, 'id'>) => Promise<void>;
     onCancel: () => void;
   }> = ({ ingredient, onSubmit, onCancel }) => {
     const [formData, setFormData] = useState({
@@ -45,6 +53,7 @@ const Inventory: React.FC = () => {
       unit: ingredient?.unit || 'piece',
       expiryDate: ingredient?.expiryDate || '',
     });
+    const [submitting, setSubmitting] = useState(false);
 
     const availableCategories = categories.slice(1); // Remove 'All'
 
@@ -57,18 +66,24 @@ const Inventory: React.FC = () => {
       }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (formData.categories.length === 0) {
         alert('Please select at least one category');
         return;
       }
-      const newIngredient: Ingredient = {
-        id: ingredient?.id || Date.now().toString(),
-        ...formData,
-        addedDate: ingredient?.addedDate || new Date().toISOString().split('T')[0],
-      };
-      onSubmit(newIngredient);
+      
+      setSubmitting(true);
+      try {
+        await onSubmit({
+          ...formData,
+          addedDate: ingredient?.addedDate || new Date().toISOString().split('T')[0],
+        });
+      } catch (error) {
+        console.error('Error submitting ingredient:', error);
+      } finally {
+        setSubmitting(false);
+      }
     };
 
     return (
@@ -86,6 +101,7 @@ const Inventory: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 required
+                disabled={submitting}
               />
             </div>
 
@@ -101,6 +117,7 @@ const Inventory: React.FC = () => {
                         checked={formData.categories.includes(category)}
                         onChange={() => handleCategoryToggle(category)}
                         className="rounded border-gray-300 text-green-500 focus:ring-green-500"
+                        disabled={submitting}
                       />
                       <span className="text-sm text-gray-700">{category}</span>
                     </label>
@@ -118,6 +135,7 @@ const Inventory: React.FC = () => {
                           type="button"
                           onClick={() => handleCategoryToggle(category)}
                           className="ml-1 text-green-600 hover:text-green-800"
+                          disabled={submitting}
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -135,6 +153,7 @@ const Inventory: React.FC = () => {
                   value={formData.unit}
                   onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  disabled={submitting}
                 >
                   <option value="piece">piece</option>
                   <option value="kg">kg</option>
@@ -159,6 +178,7 @@ const Inventory: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   required
+                  disabled={submitting}
                 />
               </div>
             </div>
@@ -171,20 +191,30 @@ const Inventory: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 required
+                disabled={submitting}
               />
             </div>
 
             <div className="flex space-x-3 pt-4">
               <button
                 type="submit"
-                className="flex-1 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors"
+                disabled={submitting}
+                className="flex-1 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
-                {ingredient ? 'Update' : 'Add'} Ingredient
+                {submitting ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <span>{ingredient ? 'Update' : 'Add'} Ingredient</span>
+                )}
               </button>
               <button
                 type="button"
                 onClick={onCancel}
-                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                disabled={submitting}
+                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -195,19 +225,43 @@ const Inventory: React.FC = () => {
     );
   };
 
-  const handleAddIngredient = (ingredient: Ingredient) => {
-    dispatch({ type: 'ADD_INGREDIENT', payload: ingredient });
+  const handleAddIngredient = async (ingredient: Omit<Ingredient, 'id'>) => {
+    await addIngredient(ingredient);
     setShowAddForm(false);
   };
 
-  const handleUpdateIngredient = (ingredient: Ingredient) => {
-    dispatch({ type: 'UPDATE_INGREDIENT', payload: ingredient });
-    setEditingIngredient(null);
+  const handleUpdateIngredient = async (ingredient: Omit<Ingredient, 'id'>) => {
+    if (editingIngredient) {
+      await updateIngredient(editingIngredient.id, ingredient);
+      setEditingIngredient(null);
+    }
   };
 
-  const handleDeleteIngredient = (id: string) => {
-    dispatch({ type: 'DELETE_INGREDIENT', payload: id });
+  const handleDeleteIngredient = async (id: string) => {
+    if (confirm('Are you sure you want to delete this ingredient?')) {
+      await deleteIngredient(id);
+    }
   };
+
+  if (ingredientsLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader className="w-8 h-8 animate-spin text-green-500" />
+        <span className="ml-2 text-gray-600">Loading ingredients...</span>
+      </div>
+    );
+  }
+
+  if (ingredientsError) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="flex items-center space-x-2">
+          <AlertCircle className="w-5 h-5 text-red-500" />
+          <p className="text-red-700">Error loading ingredients: {ingredientsError}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -338,7 +392,7 @@ const Inventory: React.FC = () => {
         })}
       </div>
 
-      {filteredIngredients.length === 0 && (
+      {filteredIngredients.length === 0 && !ingredientsLoading && (
         <div className="text-center py-12">
           <Package2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No ingredients found</h3>
